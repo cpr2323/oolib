@@ -29,8 +29,6 @@ set (OOLIB_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/Source/FileSelectLabel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Source/FileSelectLabel.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/LambdaThread.h
-    ${CMAKE_CURRENT_LIST_DIR}/Source/MruListProperties.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/Source/MruListProperties.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/NoArrowComboBoxLnF.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/PersistentRootProperties.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Source/PersistentRootProperties.h
@@ -40,7 +38,6 @@ set (OOLIB_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/Source/RoundedSlideSwitch.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/RuntimeRootProperties.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Source/RuntimeRootProperties.h
-    ${CMAKE_CURRENT_LIST_DIR}/Source/SinglePoleFilter.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/SplitWindowComponent.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Source/SplitWindowComponent.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/ValueTreeFile.cpp
