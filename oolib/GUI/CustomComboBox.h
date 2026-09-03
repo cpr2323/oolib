@@ -1,7 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "CustomComponentMouseHandler.h"
+#include "oolib/GUI/CustomComponentMouseHandler.h"
 
 class CustomComboBox : public juce::ComboBox
 {

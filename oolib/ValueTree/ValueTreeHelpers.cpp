@@ -1,5 +1,5 @@
-#include "ValueTreeHelpers.h"
-#include "Crc.h"
+#include "oolib/ValueTree/ValueTreeHelpers.h"
+#include "oolib/Core/Crc.h"
 
 static void DebugLog (juce::String logLine)
 {

@@ -1,4 +1,4 @@
-#include "ErrorHelpers.h"
+#include "oolib/GUI/ErrorHelpers.h"
 
 namespace ErrorHelpers
 {

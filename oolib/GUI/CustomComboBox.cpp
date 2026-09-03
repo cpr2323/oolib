@@ -1,5 +1,5 @@
-#include "CustomComboBox.h"
-#include "DebugLog.h"
+#include "oolib/GUI/CustomComboBox.h"
+#include "oolib/Debug/DebugLog.h"
 
 void CustomComboBox::mouseDown (const juce::MouseEvent& mouseEvent)
 {

@@ -1,7 +1,7 @@
-#include "DirectoryValueTree.h"
-#include "DebugLog.h"
-#include "RuntimeRootProperties.h"
-#include "ValueTreeHelpers.h"
+#include "oolib/Directory/DirectoryValueTree.h"
+#include "oolib/Debug/DebugLog.h"
+#include "oolib/Properties/RuntimeRootProperties.h"
+#include "oolib/ValueTree/ValueTreeHelpers.h"
 #include <algorithm>
 
 #define LOG_DIRECTORY_VALUE_TREE 0

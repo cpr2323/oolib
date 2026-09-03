@@ -1,9 +1,9 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "DebugLog.h"
-#include "CustomComponentMouseHandler.h"
-#include "ErrorHelpers.h"
+#include "oolib/Debug/DebugLog.h"
+#include "oolib/GUI/CustomComponentMouseHandler.h"
+#include "oolib/GUI/ErrorHelpers.h"
 
 #define LOG_MOUSE_DRAG_INFO 0
 #if LOG_MOUSE_DRAG_INFO

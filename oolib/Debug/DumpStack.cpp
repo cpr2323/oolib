@@ -1,4 +1,4 @@
-#include "DumpStack.h"
+#include "oolib/Debug/DumpStack.h"
 
 void dumpStacktrace (int depth, std::function<void (juce::String)> logger)
 {

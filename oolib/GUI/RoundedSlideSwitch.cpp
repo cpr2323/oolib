@@ -1,5 +1,5 @@
-#include "RoundedSlideSwitch.h"
-#include "DebugLog.h"
+#include "oolib/GUI/RoundedSlideSwitch.h"
+#include "oolib/Debug/DebugLog.h"
 
 RoundedSlideSwitch::RoundedSlideSwitch () : Button ({})
 {

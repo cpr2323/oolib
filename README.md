@@ -6,11 +6,34 @@ Shared JUCE utility code, extracted from the `Source/Utility` folders of
 Every file here is self-contained: the only includes are `<JuceHeader.h>` and
 other headers in this folder. Nothing reaches into an owning application.
 
+## Layout
+
+```
+oolib/
+    Core/         small standalone primitives (Crc, LambdaThread)
+    Debug/        logging and diagnostics (DebugLog, DumpStack, ValueTreeMonitor, WatchDogTimer)
+    Directory/    directory scanning (DirectoryValueTree, DirectoryDataProperties)
+    GUI/          components, look and feel, and GUI helpers
+    Properties/   the shared application state schema (Root / Persistent / Runtime)
+    ValueTree/    ValueTree infrastructure (Wrapper, Helpers, File)
+```
+
+Sources include each other by their namespaced path:
+
+```cpp
+#include "oolib/ValueTree/ValueTreeWrapper.h"
+#include "oolib/GUI/CustomComboBox.h"
+```
+
+Nothing in the source refers to where oolib is checked out, so relocating it changes only the
+`target_include_directories` line below. The `oolib/` prefix also keeps these headers from colliding
+with a consuming project's own `GUI/` or `Properties/` folders.
+
 ## Using it
 
-These sources `#include <JuceHeader.h>`, so they have to be compiled as part of
-a JUCE target rather than built as a standalone library. Add oolib as a
-submodule and pull the source list into your own target:
+These sources `#include <JuceHeader.h>`, so they have to be compiled as part of a JUCE target
+rather than built as a standalone library. Add oolib as a submodule and pull the source list into
+your own target:
 
 ```cmake
 include (submodules/oolib/oolib.cmake)
@@ -84,6 +107,9 @@ message thread.
 ## Client migration notes
 
 The three projects have not been updated to use oolib yet. When they are:
+
+- Every `#include "Utility/X.h"` becomes `#include "oolib/<Category>/X.h"`. The category for each
+  file is in the Layout section above.
 
 - `FileSelectLabel` gained `setDialogTitle`. Without it, callers get a generic prompt instead of their
   app specific one. Affects `ZoneEditor.h` in A8Manager and `ChannelEditorComponent.h` in SquidManager.

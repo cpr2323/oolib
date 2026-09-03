@@ -1,7 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "ValueTreeWrapper.h"
+#include "oolib/ValueTree/ValueTreeWrapper.h"
 
 // A ValueTreeWrapper for properties that are saved to the properties file
 class PersistentRootProperties : public ValueTreeWrapper<PersistentRootProperties>

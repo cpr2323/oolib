@@ -1,5 +1,5 @@
-#include "DebugLog.h"
-#include "DebugLogImplementation.h"
+#include "oolib/Debug/DebugLog.h"
+#include "oolib/Debug/DebugLogImplementation.h"
 
 #define USE_DEFERRED_LOGGER 1
 

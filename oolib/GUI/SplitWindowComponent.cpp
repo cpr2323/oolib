@@ -1,4 +1,4 @@
-#include "SplitWindowComponent.h"
+#include "oolib/GUI/SplitWindowComponent.h"
 
 #define kSplitBarWidth 5
 

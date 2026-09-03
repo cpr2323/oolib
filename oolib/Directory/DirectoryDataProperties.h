@@ -1,7 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "ValueTreeWrapper.h"
+#include "oolib/ValueTree/ValueTreeWrapper.h"
 
 class DirectoryDataProperties : public ValueTreeWrapper<DirectoryDataProperties>
 {

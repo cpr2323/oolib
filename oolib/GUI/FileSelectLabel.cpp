@@ -1,4 +1,4 @@
-#include "FileSelectLabel.h"
+#include "oolib/GUI/FileSelectLabel.h"
 
 FileSelectLabel::FileSelectLabel ()
 {

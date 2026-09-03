@@ -1,10 +1,10 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "DirectoryDataProperties.h"
-#include "LambdaThread.h"
-#include "ValueTreeMonitor.h"
-#include "WatchDogTimer.h"
+#include "oolib/Directory/DirectoryDataProperties.h"
+#include "oolib/Core/LambdaThread.h"
+#include "oolib/Debug/ValueTreeMonitor.h"
+#include "oolib/Debug/WatchDogTimer.h"
 
 /*
     DirectoryValueTree scans a folder into a ValueTree, and keeps it up to date.

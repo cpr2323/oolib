@@ -1,5 +1,5 @@
-#include "DirectoryDataProperties.h"
-#include "ValueTreeHelpers.h"
+#include "oolib/Directory/DirectoryDataProperties.h"
+#include "oolib/ValueTree/ValueTreeHelpers.h"
 
 void DirectoryDataProperties::initValueTree ()
 {

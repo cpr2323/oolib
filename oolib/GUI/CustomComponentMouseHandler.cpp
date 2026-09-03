@@ -1,5 +1,5 @@
-#include "CustomComponentMouseHandler.h"
-#include "DebugLog.h"
+#include "oolib/GUI/CustomComponentMouseHandler.h"
+#include "oolib/Debug/DebugLog.h"
 
 #define LOG_MOUSE_DRAG_INFO 0
 #if LOG_MOUSE_DRAG_INFO
