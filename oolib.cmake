@@ -22,6 +22,10 @@ set (OOLIB_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/Source/DebugLog.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Source/DebugLog.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/DebugLogImplementation.h
+    ${CMAKE_CURRENT_LIST_DIR}/Source/DirectoryDataProperties.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/Source/DirectoryDataProperties.h
+    ${CMAKE_CURRENT_LIST_DIR}/Source/DirectoryValueTree.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/Source/DirectoryValueTree.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/DumpStack.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Source/DumpStack.h
     ${CMAKE_CURRENT_LIST_DIR}/Source/ErrorHelpers.cpp

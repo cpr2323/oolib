@@ -36,20 +36,63 @@ rest had diverged and were reconciled:
 | `ValueTreeMonitor.cpp/.h` | SquidManager's design, which routes output through a pluggable `outputFunction` instead of a hardcoded `Logger::outputDebugString`. Its refactor was incomplete and has been finished here: `valueTreeChildAdded`, `valueTreeChildRemoved` and `valueTreeParentChanged` built a log string and never emitted it, and `valueTreeChildOrderChanged` emitted a fragment without its header. All six callbacks now emit. |
 | `FileSelectLabel.cpp/.h` | SquidManager copy (adds `canMultiSelect` and a `fileChooserOptions` member). The hardcoded, app-specific file chooser title was replaced with a `setDialogTitle` setter and a generic default. |
 
-## Deliberately not included yet
+## Directory scanning
 
-`DirectoryValueTree.cpp/.h` and `DirectoryDataProperties.cpp/.h` are still owned
-by the individual applications.
+`DirectoryValueTree` scans a folder into a ValueTree and keeps it current. It carries no knowledge of
+any particular application's file types. Clients describe those by registering them, each as a name
+plus up to three callbacks:
 
-A8Manager and SquidManager each rewrote `DirectoryValueTree` independently, one
-day apart, to solve the same ValueTree thread-safety problem in different ways.
-A8Manager's version also depends directly on application code
-(`Assimil8or/Audio/AudioManager.h`, `Assimil8or/FileTypeHelpers.h`,
-`SystemServices.h`), and SquidManager's has a Squid-specific sort rule for names
-beginning with `bank `. Their `DirectoryDataProperties::TypeIndex` enums are also
-incompatible: A8Manager has `folder, systemFile, presetFile, audioFile,
-unknownFile` while SquidManager has `unknownFile, folder, systemFile, audioFile`.
+| Callback | Purpose |
+| --- | --- |
+| `predicate` | identifies a file as being of this type |
+| `decorator` | adds type specific properties to an entry, only during a full scan |
+| `comparator` | orders entries within this type's section of a folder listing |
 
-These belong in oolib once the class is properly abstracted for client
-configuration — types registered at runtime, with callbacks for identifying and
-processing them. That work is deliberately separate from this initial extraction.
+`registerFileType` returns the id that appears as the `type` property of matching `FileProperties`
+entries, replacing the old compile time `TypeIndex` enum. Two ids exist without being registered:
+`unknownTypeId` (0) when no predicate matches, and `folderTypeId` (1) for folders, which are
+identified structurally rather than by a predicate.
+
+Registered types are published into the `DirectoryDataProperties` tree, so any client holding that
+tree can resolve a name to an id via `DirectoryDataProperties::getFileTypeId` without the registering
+code having to pass the value around.
+
+```cpp
+directoryValueTree.init (runtimeRootProperties.getValueTree ());
+
+const auto systemTypeId { directoryValueTree.registerFileType ("system",
+    [] (juce::File file) { return FileTypeHelpers::isSystemFile (file); }) };
+const auto audioTypeId  { directoryValueTree.registerFileType ("audio",
+    [] (juce::File file) { return file.getFileExtension ().toLowerCase () == ".wav"; },
+    [this] (juce::ValueTree entryVT, juce::File file) { /* add bit depth, sample rate, ... */ }) };
+
+directoryValueTree.setSortOrder ({ DirectoryValueTree::folderTypeId, systemTypeId, audioTypeId,
+                                   DirectoryValueTree::unknownTypeId });
+```
+
+Predicates are tried in registration order, so register cheap tests before expensive ones. Sort order
+is separate from registration order, and defaults to folders, then registered types in registration
+order, then unknown. `setComparatorForType` is the only way to attach a comparator to the built-in
+folder and unknown sections, since those are never registered.
+
+Register between `init ()` and the first scan. Registering later would resize the section list out
+from under a running sort, and is asserted against.
+
+**Threading:** predicates, decorators and comparators are called on the scan thread, never on the
+message thread.
+
+## Client migration notes
+
+The three projects have not been updated to use oolib yet. When they are:
+
+- `FileSelectLabel` gained `setDialogTitle`. Without it, callers get a generic prompt instead of their
+  app specific one. Affects `ZoneEditor.h` in A8Manager and `ChannelEditorComponent.h` in SquidManager.
+- `ValueTreeHelpers::compareChidrenAndThierPropertiesUnordered` is now spelled `compareChildren...`.
+  No callers outside the old Utility folders.
+- `CustomTextEditor::setValue` calls `setText` before `updateDataCallback`. A8Manager and SquidManager
+  previously used the opposite order, so both need testing.
+- `DirectoryDataProperties::TypeIndex` is gone. Every `TypeIndex::x` reference becomes an id obtained
+  from registration or from `DirectoryDataProperties::getFileTypeId`. 15 references across 3 files in
+  A8Manager, 9 across 2 files in SquidManager.
+- SquidManager's `systemFile` type was already unreachable: nothing produced it, so its `FileView`
+  test for it could never be true. It simply goes away.
