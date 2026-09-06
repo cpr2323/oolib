@@ -44,6 +44,7 @@ set (OOLIB_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/ErrorHelpers.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/FileSelectLabel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/FileSelectLabel.h
+    ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/InteractiveWaveform.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/MarkerOverlay.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/NoArrowComboBoxLnF.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/RoundedSlideSwitch.cpp

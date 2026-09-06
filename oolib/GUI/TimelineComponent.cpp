@@ -218,7 +218,7 @@ void TimelineComponent::paint (juce::Graphics& g)
     const float majorTop   = labelBandH;                            // major ticks below the text
     const float minorTop   = labelBandH + (bottom - labelBandH) * 0.45f; // minor ticks shorter
 
-    g.setFont (juce::Font (11.0f));
+    g.setFont (juce::Font (juce::FontOptions (11.0f)));
 
     for (const auto& t : ticks)
     {

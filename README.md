@@ -15,7 +15,8 @@ oolib/
     Debug/        logging and diagnostics (DebugLog, DumpStack, ValueTreeMonitor, WatchDogTimer)
     Directory/    directory scanning (DirectoryValueTree, DirectoryDataProperties)
     GUI/          components, look and feel, and GUI helpers, including the
-                  waveform display (WaveformView, TimelineComponent, MarkerOverlay)
+                  waveform display (WaveformView, InteractiveWaveform,
+                  TimelineComponent, MarkerOverlay)
     Properties/   the shared application state schema (Root / Persistent / Runtime)
     ValueTree/    ValueTree infrastructure (Wrapper, Helpers, File)
 ```
@@ -108,7 +109,7 @@ message thread.
 
 ## Waveform display
 
-Three GUI components make up a zoomable waveform editor. Each is usable on its own, and none of
+Four GUI components make up a zoomable waveform editor. Each is usable on its own, and none of
 them knows about the others' hosts - they are wired together by the app.
 
 | Component | Role |
@@ -116,15 +117,29 @@ them knows about the others' hosts - they are wired together by the app.
 | `WaveformView` | Draws the audio. Owns the authoritative sample <-> pixel transform. |
 | `TimelineComponent` | A ruler above the waveform. Carries no audio, only the same view mapping. |
 | `MarkerOverlay` | A transparent overlay for dragging start/end marker pairs ("regions"). |
+| `InteractiveWaveform` | A `WaveformView` subclass adding wheel / drag zoom and scroll. |
 
 `WaveformView` does not own its audio (the `juce::AudioBuffer<float>` you pass must outlive it) and
 deliberately has **no mouse handling**: zoom and scroll are driven entirely through its public view
-API (`zoomByAroundX`, `scrollBySamples`, `setVisibleRange`, ...). An app that wants wheel/drag
-navigation subclasses it and calls that API - WaveformTester's `InteractiveWaveform` is the
-reference for that, and is not part of oolib.
+API (`zoomByAroundX`, `scrollBySamples`, `setVisibleRange`, ...). Keeping the drawing and the
+gestures apart means an app can pick its own interaction model without forking the view.
 
-The three are kept in lock-step by giving the timeline and overlay the same horizontal bounds as
-the waveform, and re-publishing the view whenever it changes:
+`InteractiveWaveform` is the standard interaction layer, and is what most hosts should use: wheel
+to zoom time around the pointer, ctrl + wheel to zoom amplitude, left drag to scroll, right drag to
+zoom both axes at once. It touches nothing but `WaveformView`'s public API, so an app wanting
+different gestures can ignore it and subclass `WaveformView` directly, using this as the reference.
+Gesture feel is tunable without subclassing:
+
+```cpp
+waveform.setWheelZoomStep (0.85);  // zoom multiplier per wheel notch, default 0.85
+waveform.setDragZoomRate  (0.01);  // zoom rate per pixel of right-drag, default 0.01
+```
+
+It reports back through `onViewChanged` (any gesture that moved the view), `onCursorSample` and
+`onCursorExit`, which is how the ruler, overlay and status bar are kept in step - see below.
+
+The components are kept in lock-step by giving the timeline and overlay the same horizontal bounds
+as the waveform, and re-publishing the view whenever it changes:
 
 ```cpp
 waveform.setAudioBuffer (&audioBuffer);

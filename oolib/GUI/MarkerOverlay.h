@@ -303,8 +303,8 @@ private:
 
     void drawTag (juce::Graphics& g, const Region& r, bool isEnd, const juce::String& text) const
     {
-        g.setFont (12.0f);
-        const auto w = (float) g.getCurrentFont ().getStringWidth (text) + 8.0f;
+        g.setFont (juce::Font (juce::FontOptions (12.0f)));
+        const auto w = juce::GlyphArrangement::getStringWidth (g.getCurrentFont (), text) + 8.0f;
         const auto h = 16.0f;
         const auto x = sampleToX (isEnd ? r.end : r.start);
         const auto tx = isEnd ? x - w - 2.0f : x + 2.0f;                  // inside the region
