@@ -44,11 +44,16 @@ set (OOLIB_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/ErrorHelpers.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/FileSelectLabel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/FileSelectLabel.h
+    ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/MarkerOverlay.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/NoArrowComboBoxLnF.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/RoundedSlideSwitch.cpp
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/RoundedSlideSwitch.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/SplitWindowComponent.cpp
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/SplitWindowComponent.h
+    ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/TimelineComponent.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/TimelineComponent.h
+    ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/WaveformView.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/WaveformView.h
     # Properties
     ${CMAKE_CURRENT_LIST_DIR}/oolib/Properties/PersistentRootProperties.cpp
     ${CMAKE_CURRENT_LIST_DIR}/oolib/Properties/PersistentRootProperties.h

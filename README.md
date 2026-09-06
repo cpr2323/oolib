@@ -1,7 +1,8 @@
 # oolib
 
 Shared JUCE utility code, extracted from the `Source/Utility` folders of
-**A8Manager**, **ClutchEdit** and **SquidManager**.
+**A8Manager**, **ClutchEdit** and **SquidManager**, plus the waveform display
+components prototyped in **WaveformTester**.
 
 Every file here is self-contained: the only includes are `<JuceHeader.h>` and
 other headers in this folder. Nothing reaches into an owning application.
@@ -13,7 +14,8 @@ oolib/
     Core/         small standalone primitives (Crc, LambdaThread)
     Debug/        logging and diagnostics (DebugLog, DumpStack, ValueTreeMonitor, WatchDogTimer)
     Directory/    directory scanning (DirectoryValueTree, DirectoryDataProperties)
-    GUI/          components, look and feel, and GUI helpers
+    GUI/          components, look and feel, and GUI helpers, including the
+                  waveform display (WaveformView, TimelineComponent, MarkerOverlay)
     Properties/   the shared application state schema (Root / Persistent / Runtime)
     ValueTree/    ValueTree infrastructure (Wrapper, Helpers, File)
 ```
@@ -103,6 +105,60 @@ from under a running sort, and is asserted against.
 
 **Threading:** predicates, decorators and comparators are called on the scan thread, never on the
 message thread.
+
+## Waveform display
+
+Three GUI components make up a zoomable waveform editor. Each is usable on its own, and none of
+them knows about the others' hosts - they are wired together by the app.
+
+| Component | Role |
+| --- | --- |
+| `WaveformView` | Draws the audio. Owns the authoritative sample <-> pixel transform. |
+| `TimelineComponent` | A ruler above the waveform. Carries no audio, only the same view mapping. |
+| `MarkerOverlay` | A transparent overlay for dragging start/end marker pairs ("regions"). |
+
+`WaveformView` does not own its audio (the `juce::AudioBuffer<float>` you pass must outlive it) and
+deliberately has **no mouse handling**: zoom and scroll are driven entirely through its public view
+API (`zoomByAroundX`, `scrollBySamples`, `setVisibleRange`, ...). An app that wants wheel/drag
+navigation subclasses it and calls that API - WaveformTester's `InteractiveWaveform` is the
+reference for that, and is not part of oolib.
+
+The three are kept in lock-step by giving the timeline and overlay the same horizontal bounds as
+the waveform, and re-publishing the view whenever it changes:
+
+```cpp
+waveform.setAudioBuffer (&audioBuffer);
+timeline.setSampleRate (sampleRate);
+
+markerOverlay.setWaveformView (&waveform);
+// Markers then read out in whatever units the timeline is showing.
+markerOverlay.formatPosition = [this] (double sample) { return timeline.formatSamplePosition (sample); };
+
+MarkerOverlay::Region loop;
+loop.name = "loop";
+loop.endMode = MarkerOverlay::EndMode::length;  // end travels with the start
+const auto loopRegion { markerOverlay.addRegion (loop) };
+
+// In resized (): the overlay sits exactly over the waveform, the ruler directly above it.
+timeline.setBounds (content.removeFromTop (26));
+waveform.setBounds (content);
+markerOverlay.setBounds (content);
+
+// Whenever the view moves, push it to the ruler and repaint the markers.
+timeline.setView (waveform.getVisibleStartSample (), waveform.getSamplesPerPixel ());
+markerOverlay.repaint ();
+```
+
+`MarkerOverlay` only claims its small handle rectangles in `hitTest`, so clicks anywhere else fall
+through to the waveform beneath and panning still works over the markers. It enforces the geometry
+(start never crosses end, both stay inside the audio, `EndMode::length` holds the length while the
+start moves) and reports edits through `onRegionChanged`; naming a region "sample" or "loop" is left
+to the host.
+
+`TimelineComponent` offers minutes:seconds, bars:beats and samples. `setAvailableUnits` restricts
+which of those its right-click popup offers - with a single unit the popup is suppressed entirely,
+and dropping the unit currently on display falls back to the first available one and reports it
+through `onUnitChanged`.
 
 ## Client migration notes
 
