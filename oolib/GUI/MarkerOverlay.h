@@ -8,29 +8,26 @@
     MarkerOverlay - a transparent overlay for editing sample markers on top of a
     WaveformView.
 
-    The overlay is deliberately app-agnostic. Every app models its markers as
-    sample offsets, and (across the apps we care about) they always come in
-    start/end PAIRS - a "region". What differs is how many regions there are and
-    what each app *calls* them:
+    A marker is one position in the audio, in samples, with a name and a look.
+    That is the whole model: the overlay holds a flat list of them and never
+    assumes that any two are related. Apps that DO have relationships between
+    their markers - a sample start that must not pass its end, a loop point that
+    lives between the two, a length that travels with its start - express them
+    through constrainPosition (where a marker may go) and onMarkerMoved (what
+    else has to move once it got there), so those rules stay with the app that
+    owns them instead of being baked in here:
 
-        * A8Manager   : sample start/end, plus loop start/length (2 regions).
-        * SquidSalmple: up to 64 cue sets (64 regions).
+        * A8Manager   : sample start/end, plus loop start/length.
+        * SquidSalmple: a cue set's start, loop and end.
 
-    So this component only knows about regions and the universal constraints:
+    The overlay's own only rule is that a marker stays on a whole sample inside
+    the audio, and it is applied last - so a constrainPosition that hands back
+    something out of range still cannot put a marker off the end of the file. It
+    maps sample<->pixel through the WaveformView it sits over, so markers stay
+    locked to the waveform at every zoom/scroll.
 
-        * A region's start can never move past its end, nor its end before its
-          start.
-        * Neither marker can leave the audio: both stay within [0, length].
-        * A region's end can be treated as a LENGTH instead of a position
-          (EndMode::length). In that mode the length is held constant when the
-          start moves (so the end moves with it), and - as a consequence - once
-          the end reaches the end of the audio the start can no longer move right
-          (doing so would push the end out of bounds).
-
-    Interpreting a region as "sample" vs "loop", or its end as "length", is left
-    to the host; the overlay just enforces the geometry and reports edits through
-    onRegionChanged. It maps sample<->pixel through the WaveformView it sits over,
-    so markers stay locked to the waveform at every zoom/scroll.
+    Every marker carries its own Style, so one app can draw its markers as flat
+    white lines and another as coloured flags without either having to subclass.
 
     Mouse handling only claims the small handle rectangles (see hitTest); clicks
     anywhere else fall through to the waveform beneath for panning/zooming.
@@ -38,18 +35,39 @@
 class MarkerOverlay : public juce::Component
 {
 public:
-    enum class EndMode        { position, length };
+    // Which edge the handle sits against.
     enum class HandlePlacement { top, bottom };
 
-    struct Region
+    // How the handle is drawn. 'none' leaves the marker line on its own, and
+    // makes that marker read-only - there is nothing left to grab.
+    enum class HandleShape { rectangle, roundedRectangle, triangle, none };
+
+    // Which side of the marker line the handle hangs off. Markers that bound a
+    // span usually point inwards (start rightOfLine, end leftOfLine) so both
+    // stay legible when the span is narrow.
+    enum class HandleAlignment { centred, leftOfLine, rightOfLine };
+
+    // When the marker's name and position are shown beside it.
+    enum class LabelVisibility { never, whileDragging, always };
+
+    struct Style
     {
-        juce::String    name;
-        double          start   { 0.0 };  // sample offset
-        double          end     { 0.0 };  // sample offset of the end marker
-        EndMode         endMode { EndMode::position };
-        HandlePlacement placement { HandlePlacement::top };
-        juce::Colour    colour  { juce::Colours::yellow };
-        bool            dashed  { false };
+        juce::Colour    colour        { juce::Colours::yellow };
+        bool            dashed        { false };
+        float           lineThickness { 1.5f };
+        HandlePlacement placement     { HandlePlacement::top };
+        HandleShape     shape         { HandleShape::roundedRectangle };
+        HandleAlignment alignment     { HandleAlignment::centred };
+        float           handleWidth   { 10.0f };
+        float           handleHeight  { 14.0f };
+        LabelVisibility label         { LabelVisibility::whileDragging };
+    };
+
+    struct Marker
+    {
+        juce::String name;
+        double       position { 0.0 };  // sample offset
+        Style        style;
     };
 
     MarkerOverlay ()
@@ -62,48 +80,77 @@ public:
     void setWaveformView (WaveformView* view) { waveform = view; }
 
     //==============================================================================
-    // Region setup / access.
-    int addRegion (const Region& r)
+    // Marker list. Indices are stable for the life of the list, and markers are
+    // drawn in the order they were added, so add the ones that should sit on top
+    // last.
+    int addMarker (const Marker& marker)
     {
-        regions.add (r);
-        clampRegion (regions.getReference (regions.size () - 1));
+        markers.add (marker);
+        clampMarker (markers.getReference (markers.size () - 1));
         repaint ();
-        return regions.size () - 1;
+        return markers.size () - 1;
     }
 
-    void clearRegions () { regions.clear (); repaint (); }
-    int  getNumRegions () const noexcept { return regions.size (); }
-
-    double  getStart   (int region) const { return regions[region].start; }
-    double  getEnd     (int region) const { return regions[region].end; }
-    double  getLength  (int region) const { return regions[region].end - regions[region].start; }
-    EndMode getEndMode (int region) const { return regions[region].endMode; }
-
-    // Set both markers of a region at once (clamped to the geometry rules).
-    void setRegionPositions (int region, double start, double end)
+    void clearMarkers ()
     {
-        auto& r = regions.getReference (region);
-        r.start = start;
-        r.end   = end;
-        clampRegion (r);
+        markers.clear ();
+        drag = {};
         repaint ();
     }
 
-    // Switching modes never moves the markers - it only changes how the end is
-    // interpreted and how future start-drags behave. (In length mode the current
-    // end-start becomes the held length.)
-    void setEndMode (int region, EndMode mode)
+    int getNumMarkers () const noexcept { return markers.size (); }
+
+    // -1 when nothing has that name. Names are the overlay's only concession to
+    // meaning: it never interprets them, they are there so a host can find its
+    // markers without tracking indices, and so labels can say what they are.
+    int indexOfMarker (const juce::String& name) const
     {
-        regions.getReference (region).endMode = mode;
+        for (auto markerIndex { 0 }; markerIndex < markers.size (); ++markerIndex)
+            if (markers.getReference (markerIndex).name == name)
+                return markerIndex;
+        return -1;
+    }
+
+    const juce::String& getName (int markerIndex) const { return markers.getReference (markerIndex).name; }
+
+    double getPosition (int markerIndex) const { return markers.getReference (markerIndex).position; }
+
+    // Moves a marker without consulting constrainPosition - the caller is the
+    // one deciding where it goes - and without reporting it back through
+    // onMarkerMoved. Only the audio bounds still apply.
+    void setPosition (int markerIndex, double sample)
+    {
+        auto& marker { markers.getReference (markerIndex) };
+        marker.position = sample;
+        clampMarker (marker);
         repaint ();
     }
 
-    // Notified (with the region index) whenever a drag edits a region.
-    std::function<void (int)> onRegionChanged;
+    const Style& getStyle (int markerIndex) const { return markers.getReference (markerIndex).style; }
 
-    // How a sample offset is rendered in the UI (drag tags, future readouts).
-    // Set this to the timeline's formatter so markers follow the selected units.
-    // When unset, falls back to a raw sample count.
+    void setStyle (int markerIndex, const Style& newStyle)
+    {
+        markers.getReference (markerIndex).style = newStyle;
+        repaint ();
+    }
+
+    // The marker currently being dragged, or -1.
+    int getDraggedMarker () const noexcept { return drag.markerIndex; }
+
+    //==============================================================================
+    // Where the marker being dragged is allowed to go: given its index and the
+    // position the drag is asking for, return the position it may actually take.
+    // This is where an app puts the relationships between its own markers. When
+    // unset, the audio bounds are the only limit.
+    std::function<double (int markerIndex, double proposedPosition)> constrainPosition;
+
+    // A drag moved a marker; its new position is already in place. Move any
+    // markers that have to follow it from here, with setPosition.
+    std::function<void (int markerIndex)> onMarkerMoved;
+
+    // How a sample offset is rendered in labels. Set this to the timeline's
+    // formatter so markers follow the units on display. When unset, falls back
+    // to a raw sample count.
     std::function<juce::String (double)> formatPosition;
 
     //==============================================================================
@@ -112,48 +159,49 @@ public:
         if (! haveAudio ())
             return;
 
-        for (const auto& r : regions)
-            paintRegion (g, r);
-
-        if (drag.region >= 0)
-            paintDragTags (g, regions[drag.region]);
+        for (auto markerIndex { 0 }; markerIndex < markers.size (); ++markerIndex)
+            paintMarker (g, markers.getReference (markerIndex), markerIndex == drag.markerIndex);
     }
 
     // Only the handle rectangles belong to us; everything else falls through to
     // the waveform below so panning / zooming still works over the markers.
     bool hitTest (int x, int y) override
     {
-        return findHandleAt ((float) x, (float) y).region >= 0;
+        return findHandleAt ((float) x, (float) y) >= 0;
     }
 
     void mouseDown (const juce::MouseEvent& e) override
     {
-        drag = findHandleAt (e.position.x, e.position.y);
-        if (drag.region < 0)
+        drag.markerIndex = findHandleAt (e.position.x, e.position.y);
+        if (drag.markerIndex < 0)
             return;
 
-        const auto& r = regions[drag.region];
-        const auto handleSample = drag.isEnd ? r.end : r.start;
-        grabOffset = handleSample - xToSample (e.position.x); // keep grab point stable
+        // Keep the point that was grabbed under the pointer for the whole drag.
+        drag.grabOffset = getPosition (drag.markerIndex) - xToSample (e.position.x);
+        repaint ();
     }
 
     void mouseDrag (const juce::MouseEvent& e) override
     {
-        if (drag.region < 0)
+        if (drag.markerIndex < 0)
             return;
 
-        moveHandle (drag.region, drag.isEnd, xToSample (e.position.x) + grabOffset);
+        moveMarker (drag.markerIndex, xToSample (e.position.x) + drag.grabOffset);
     }
 
     void mouseUp (const juce::MouseEvent&) override
     {
         drag = {};
-        repaint (); // clear the drag value tags
+        repaint (); // clear the drag labels
     }
 
 private:
     //==============================================================================
-    struct HandleRef { int region { -1 }; bool isEnd { false }; };
+    struct DragState
+    {
+        int    markerIndex { -1 };
+        double grabOffset  { 0.0 };
+    };
 
     bool haveAudio () const noexcept
     {
@@ -169,75 +217,71 @@ private:
     double xToSample (float x)       const { return waveform->xToSample (x); }
 
     //==============================================================================
-    // Geometry rules. All marker positions are snapped to whole samples.
-    void clampRegion (Region& r) const
+    // The overlay's own rule, applied after the host's constraint so that a
+    // constrainPosition which returns something out of range still cannot put a
+    // marker off the audio.
+    void clampMarker (Marker& marker) const
     {
-        const auto N = totalSamples ();
-        r.start = juce::jlimit (0.0, N, std::round (r.start));
-        r.end   = juce::jlimit (r.start, N, std::round (r.end));
+        marker.position = juce::jlimit (0.0, totalSamples (), std::round (marker.position));
     }
 
-    void moveHandle (int region, bool isEnd, double newPos)
+    void moveMarker (int markerIndex, double proposedPosition)
     {
-        auto& r = regions.getReference (region);
-        const auto N = totalSamples ();
-        newPos = std::round (newPos);
+        auto& marker { markers.getReference (markerIndex) };
+        proposedPosition = std::round (proposedPosition);
+        marker.position = constrainPosition ? constrainPosition (markerIndex, proposedPosition)
+                                            : proposedPosition;
+        clampMarker (marker);
 
-        if (isEnd)
-        {
-            // End (in either mode) is bounded by the start and the audio end.
-            r.end = juce::jlimit (r.start, N, newPos);
-        }
-        else if (r.endMode == EndMode::length)
-        {
-            // Length is held constant, so the end travels with the start. That
-            // also caps how far right the start can go: start <= length - end.
-            const auto length = r.end - r.start;
-            const auto maxStart = juce::jmax (0.0, N - length);
-            r.start = juce::jlimit (0.0, maxStart, newPos);
-            r.end   = r.start + length;
-        }
-        else
-        {
-            // End is a fixed position: the start just can't cross it.
-            r.start = juce::jlimit (0.0, r.end, newPos);
-        }
-
-        if (onRegionChanged)
-            onRegionChanged (region);
+        if (onMarkerMoved)
+            onMarkerMoved (markerIndex);
         repaint ();
     }
 
     //==============================================================================
-    juce::Rectangle<float> handleRect (const Region& r, bool isEnd) const
+    juce::Rectangle<float> handleRect (const Marker& marker) const
     {
-        // Handles are centred on their marker line and sit flush with the top
-        // edge (sample-style) or bottom edge (loop-style).
-        const auto x  = sampleToX (isEnd ? r.end : r.start);
-        const auto rx = x - kHandleW * 0.5f;
-        const auto ry = r.placement == HandlePlacement::top
-                          ? 0.0f
-                          : (float) getHeight () - kHandleH;
-        return { rx, ry, kHandleW, kHandleH };
+        const auto& style { marker.style };
+        const auto x { sampleToX (marker.position) };
+        const auto handleX = [&style, x] ()
+        {
+            switch (style.alignment)
+            {
+                case HandleAlignment::leftOfLine:  return x - style.handleWidth;
+                case HandleAlignment::rightOfLine: return x;
+                case HandleAlignment::centred:
+                default:                           return x - (style.handleWidth * 0.5f);
+            }
+        } ();
+        const auto handleY { style.placement == HandlePlacement::top
+                               ? 0.0f
+                               : (float) getHeight () - style.handleHeight };
+        return { handleX, handleY, style.handleWidth, style.handleHeight };
     }
 
-    HandleRef findHandleAt (float px, float py) const
+    int findHandleAt (float px, float py) const
     {
         if (! haveAudio ())
-            return {};
+            return -1;
 
-        HandleRef best;
-        float bestDist = std::numeric_limits<float>::max ();
+        auto best { -1 };
+        auto bestDistance { std::numeric_limits<float>::max () };
 
-        for (int i = 0; i < regions.size (); ++i)
+        // Later markers are drawn over earlier ones, so when two handles land in
+        // the same place the one the user can actually see wins the click.
+        for (auto markerIndex { 0 }; markerIndex < markers.size (); ++markerIndex)
         {
-            for (bool isEnd : { false, true })
+            const auto& marker { markers.getReference (markerIndex) };
+            if (marker.style.shape == HandleShape::none)
+                continue;
+
+            const auto rect { handleRect (marker) };
+            if (rect.expanded (kHitPad, kHitPad).contains (px, py))
             {
-                const auto rect = handleRect (regions[i], isEnd);
-                if (rect.expanded (kHitPad, kHitPad).contains (px, py))
+                if (const auto distance { std::abs (px - rect.getCentreX ()) }; distance <= bestDistance)
                 {
-                    const auto d = std::abs (px - rect.getCentreX ());
-                    if (d < bestDist) { bestDist = d; best = { i, isEnd }; }
+                    bestDistance = distance;
+                    best = markerIndex;
                 }
             }
         }
@@ -245,89 +289,137 @@ private:
     }
 
     //==============================================================================
-    void paintRegion (juce::Graphics& g, const Region& r) const
+    void paintMarker (juce::Graphics& g, const Marker& marker, bool isBeingDragged) const
     {
-        const auto sx = sampleToX (r.start);
-        const auto ex = sampleToX (r.end);
-        const auto H  = (float) getHeight ();
+        const auto& style { marker.style };
+        const auto x { sampleToX (marker.position) };
+        const auto height { (float) getHeight () };
 
-        g.setColour (r.colour);
-        drawVertical (g, sx, H, r.dashed);
-        drawVertical (g, ex, H, r.dashed);
-
-        paintHandle (g, r, false);
-        paintHandle (g, r, true);
-    }
-
-    static void drawVertical (juce::Graphics& g, float x, float height, bool dashed)
-    {
-        if (dashed)
+        g.setColour (style.colour);
+        if (style.dashed)
         {
-            const float dashes[] = { 5.0f, 4.0f };
-            g.drawDashedLine (juce::Line<float> (x, 0.0f, x, height), dashes, 2, 1.5f);
+            const float dashes[] { 5.0f, 4.0f };
+            g.drawDashedLine (juce::Line<float> (x, 0.0f, x, height), dashes, 2, style.lineThickness);
         }
         else
         {
-            g.drawLine (x, 0.0f, x, height, 1.5f);
+            g.drawLine (x, 0.0f, x, height, style.lineThickness);
+        }
+
+        paintHandle (g, marker);
+
+        if (style.label == LabelVisibility::always
+            || (isBeingDragged && style.label == LabelVisibility::whileDragging))
+            paintLabel (g, marker);
+    }
+
+    void paintHandle (juce::Graphics& g, const Marker& marker) const
+    {
+        const auto& style { marker.style };
+        if (style.shape == HandleShape::none)
+            return;
+
+        const auto rect { handleRect (marker) };
+        const auto outline { juce::Colours::black.withAlpha (0.45f) };
+
+        switch (style.shape)
+        {
+            case HandleShape::rectangle:
+            {
+                g.setColour (style.colour);
+                g.fillRect (rect);
+                g.setColour (outline);
+                g.drawRect (rect, 1.0f);
+            }
+            break;
+
+            case HandleShape::roundedRectangle:
+            {
+                g.setColour (style.colour);
+                g.fillRoundedRectangle (rect, 2.0f);
+                g.setColour (outline);
+                g.drawRoundedRectangle (rect, 2.0f, 1.0f);
+            }
+            break;
+
+            case HandleShape::triangle:
+            {
+                const auto path { handlePath (marker, rect) };
+                g.setColour (style.colour);
+                g.fillPath (path);
+                g.setColour (outline);
+                g.strokePath (path, juce::PathStrokeType (1.0f));
+            }
+            break;
+
+            case HandleShape::none:
+            default:
+            break;
         }
     }
 
-    void paintHandle (juce::Graphics& g, const Region& r, bool isEnd) const
+    // A centred triangle tapers to a point away from its edge; an off-centre one
+    // squares off against its marker line and slopes away from it, so which line
+    // a handle belongs to stays obvious when two of them are close together.
+    static juce::Path handlePath (const Marker& marker, juce::Rectangle<float> rect)
     {
-        const auto rect = handleRect (r, isEnd);
-        g.setColour (r.colour);
-        g.fillRoundedRectangle (rect, 2.0f);
-        g.setColour (juce::Colours::black.withAlpha (0.45f));
-        g.drawRoundedRectangle (rect, 2.0f, 1.0f);
+        const auto& style { marker.style };
+        const auto atTop { style.placement == HandlePlacement::top };
+        const auto baseY { atTop ? rect.getY () : rect.getBottom () };
+        const auto tipY  { atTop ? rect.getBottom () : rect.getY () };
+
+        juce::Path path;
+        if (style.alignment == HandleAlignment::centred)
+        {
+            path.addTriangle (rect.getX (), baseY, rect.getRight (), baseY, rect.getCentreX (), tipY);
+        }
+        else
+        {
+            const auto lineX { style.alignment == HandleAlignment::leftOfLine ? rect.getRight () : rect.getX () };
+            const auto farX  { style.alignment == HandleAlignment::leftOfLine ? rect.getX () : rect.getRight () };
+            path.addTriangle (lineX, baseY, farX, baseY, lineX, tipY);
+        }
+        return path;
     }
 
-    // While dragging, show the region's two values (the end as a length when in
-    // length mode) so the constrained behaviour is easy to see.
-    juce::String formatValue (double sample) const
+    juce::String labelText (const Marker& marker) const
     {
-        return formatPosition ? formatPosition (sample)
-                              : juce::String ((juce::int64) sample);
+        const auto position { formatPosition ? formatPosition (marker.position)
+                                             : juce::String ((juce::int64) marker.position) };
+        return marker.name.isEmpty () ? position : marker.name + " " + position;
     }
 
-    void paintDragTags (juce::Graphics& g, const Region& r) const
+    void paintLabel (juce::Graphics& g, const Marker& marker) const
     {
-        drawTag (g, r, false, "S " + formatValue (r.start));
+        const auto& style { marker.style };
+        const auto text { labelText (marker) };
 
-        // In length mode the end reads as a length; formatting the (end - start)
-        // span through the same unit formatter gives that duration in-unit.
-        const auto endText = r.endMode == EndMode::length
-                               ? "L " + formatValue (r.end - r.start)
-                               : "E " + formatValue (r.end);
-        drawTag (g, r, true, endText);
-    }
-
-    void drawTag (juce::Graphics& g, const Region& r, bool isEnd, const juce::String& text) const
-    {
         g.setFont (juce::Font (juce::FontOptions (12.0f)));
-        const auto w = juce::GlyphArrangement::getStringWidth (g.getCurrentFont (), text) + 8.0f;
-        const auto h = 16.0f;
-        const auto x = sampleToX (isEnd ? r.end : r.start);
-        const auto tx = isEnd ? x - w - 2.0f : x + 2.0f;                  // inside the region
-        const auto ty = r.placement == HandlePlacement::top
-                          ? kHandleH + 3.0f
-                          : (float) getHeight () - kHandleH - h - 3.0f;
+        const auto width { juce::GlyphArrangement::getStringWidth (g.getCurrentFont (), text) + 8.0f };
+        constexpr auto height { 16.0f };
 
-        juce::Rectangle<float> box (tx, ty, w, h);
+        // Sits on the same side of the line as the handle, and is kept inside
+        // the component so it stays readable at either edge.
+        const auto x { sampleToX (marker.position) };
+        const auto preferredX { style.alignment == HandleAlignment::leftOfLine ? x - width - 2.0f : x + 2.0f };
+        const auto labelX { juce::jlimit (0.0f, juce::jmax (0.0f, (float) getWidth () - width), preferredX) };
+        const auto labelY { style.placement == HandlePlacement::top
+                              ? style.handleHeight + 3.0f
+                              : (float) getHeight () - style.handleHeight - height - 3.0f };
+
+        const juce::Rectangle<float> box { labelX, labelY, width, height };
         g.setColour (juce::Colours::black.withAlpha (0.75f));
         g.fillRoundedRectangle (box, 2.0f);
-        g.setColour (r.colour);
+        g.setColour (style.colour);
         g.drawText (text, box, juce::Justification::centred);
     }
 
     //==============================================================================
-    static constexpr float kHandleW { 10.0f };
-    static constexpr float kHandleH { 14.0f };
-    static constexpr float kHitPad  { 3.0f };
+    static constexpr float kHitPad { 3.0f };
 
-    WaveformView*        waveform { nullptr };
-    juce::Array<Region>  regions;
-    HandleRef            drag;
-    double               grabOffset { 0.0 };
+    WaveformView*       waveform { nullptr };
+    juce::Array<Marker> markers;
+    DragState           drag;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MarkerOverlay)
 };
