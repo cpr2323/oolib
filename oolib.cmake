@@ -33,6 +33,7 @@ set (OOLIB_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/oolib/Directory/DirectoryValueTree.cpp
     ${CMAKE_CURRENT_LIST_DIR}/oolib/Directory/DirectoryValueTree.h
     # GUI
+    ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/ColourResolver.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/CustomComboBox.cpp
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/CustomComboBox.h
     ${CMAKE_CURRENT_LIST_DIR}/oolib/GUI/CustomComponentMouseHandler.cpp

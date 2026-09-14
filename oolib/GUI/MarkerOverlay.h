@@ -80,6 +80,26 @@ public:
     void setWaveformView (WaveformView* view) { waveform = view; }
 
     //==============================================================================
+    // What every marker shares: how the handle is rimmed and how the label is
+    // set. The defaults are the original look - a dark rim, and the name and
+    // position in a 12 px label on a dark plate.
+    struct Appearance
+    {
+        juce::Colour handleOutline  { juce::Colours::black.withAlpha (0.45f) }; // transparent for none
+        juce::Font   labelFont      { juce::FontOptions (12.0f) };
+        juce::String labelSeparator { " " };                                   // between name and position
+        juce::Colour labelPlate     { juce::Colours::black.withAlpha (0.75f) }; // transparent for none
+        float        labelGap       { 2.0f };                                  // from the marker line
+    };
+
+    void setAppearance (const Appearance& newAppearance)
+    {
+        appearance = newAppearance;
+        repaint ();
+    }
+    const Appearance& getAppearance () const noexcept { return appearance; }
+
+    //==============================================================================
     // Marker list. Indices are stable for the life of the list, and markers are
     // drawn in the order they were added, so add the ones that should sit on top
     // last.
@@ -320,7 +340,7 @@ private:
             return;
 
         const auto rect { handleRect (marker) };
-        const auto outline { juce::Colours::black.withAlpha (0.45f) };
+        const auto outline { appearance.handleOutline };
 
         switch (style.shape)
         {
@@ -386,7 +406,7 @@ private:
     {
         const auto position { formatPosition ? formatPosition (marker.position)
                                              : juce::String ((juce::int64) marker.position) };
-        return marker.name.isEmpty () ? position : marker.name + " " + position;
+        return marker.name.isEmpty () ? position : marker.name + appearance.labelSeparator + position;
     }
 
     void paintLabel (juce::Graphics& g, const Marker& marker) const
@@ -394,22 +414,25 @@ private:
         const auto& style { marker.style };
         const auto text { labelText (marker) };
 
-        g.setFont (juce::Font (juce::FontOptions (12.0f)));
+        g.setFont (appearance.labelFont);
         const auto width { juce::GlyphArrangement::getStringWidth (g.getCurrentFont (), text) + 8.0f };
         constexpr auto height { 16.0f };
 
         // Sits on the same side of the line as the handle, and is kept inside
         // the component so it stays readable at either edge.
         const auto x { sampleToX (marker.position) };
-        const auto preferredX { style.alignment == HandleAlignment::leftOfLine ? x - width - 2.0f : x + 2.0f };
+        const auto preferredX { style.alignment == HandleAlignment::leftOfLine ? x - width - appearance.labelGap : x + appearance.labelGap };
         const auto labelX { juce::jlimit (0.0f, juce::jmax (0.0f, (float) getWidth () - width), preferredX) };
         const auto labelY { style.placement == HandlePlacement::top
                               ? style.handleHeight + 3.0f
                               : (float) getHeight () - style.handleHeight - height - 3.0f };
 
         const juce::Rectangle<float> box { labelX, labelY, width, height };
-        g.setColour (juce::Colours::black.withAlpha (0.75f));
-        g.fillRoundedRectangle (box, 2.0f);
+        if (! appearance.labelPlate.isTransparent ())
+        {
+            g.setColour (appearance.labelPlate);
+            g.fillRoundedRectangle (box, 2.0f);
+        }
         g.setColour (style.colour);
         g.drawText (text, box, juce::Justification::centred);
     }
@@ -418,6 +441,7 @@ private:
     static constexpr float kHitPad { 3.0f };
 
     WaveformView*       waveform { nullptr };
+    Appearance          appearance;
     juce::Array<Marker> markers;
     DragState           drag;
 

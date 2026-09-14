@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "oolib/Debug/DebugLog.h"
+#include "oolib/GUI/ColourResolver.h"
 #include "oolib/GUI/CustomComponentMouseHandler.h"
 #include "oolib/GUI/ErrorHelpers.h"
 
@@ -20,11 +21,17 @@ public:
     {
         setSelectAllWhenFocused (true);
         onTextChange = [this] () { checkValue (); };
-        textColor = juce::Colours::white;
-        applyColourToAllText (textColor, true);
-
+        refreshTextColour ();
     }
     virtual ~CustomTextEditor () = default;
+
+    // Re-resolve when the host swaps or re-colours its LookAndFeel, so a theme
+    // change reaches text that was already applied.
+    void lookAndFeelChanged () override
+    {
+        juce::TextEditor::lookAndFeelChanged ();
+        refreshTextColour ();
+    }
     void setValue (T value)
     {
         constrainAndSet (value);
@@ -56,6 +63,12 @@ public:
 private:
     CustomComponentMouseHandler customComponentMouseHandler;
     juce::Colour textColor;
+
+    void refreshTextColour ()
+    {
+        textColor = oolib::resolveColour (*this, oolib::ColourIds::customTextEditorText, juce::Colours::white);
+        applyColourToAllText (textColor, true);
+    }
 
     DragRange getDragRange ()
     {

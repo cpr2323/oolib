@@ -77,6 +77,17 @@ public:
     };
     void setColourScheme (const ColourScheme& scheme);
 
+    // How the tick labels are set. The defaults are the original look: an 11 px
+    // font, sample counts written as plain digits, and labels allowed to run off
+    // either end of the ruler.
+    struct LabelStyle
+    {
+        juce::Font font                { juce::FontOptions (11.0f) };
+        bool       groupThousands      { false }; // 12,000 rather than 12000, for sample counts
+        bool       skipClippedLabels   { false }; // drop a label that would not fit inside the ruler
+    };
+    void setLabelStyle (const LabelStyle& newLabelStyle);
+
     // Same transforms as the waveform (this component's local coordinates).
     double xToSample (float x)      const noexcept;
     float  sampleToX (double sample) const noexcept;
@@ -111,6 +122,7 @@ private:
     Unit unit { Unit::timeMinutesSeconds };
     juce::Array<Unit> availableUnits;
     ColourScheme colours;
+    LabelStyle labelStyle;
 
     // Approximate target spacing between labelled (major) ticks, in pixels.
     static constexpr double kTargetMajorPixels { 84.0 };

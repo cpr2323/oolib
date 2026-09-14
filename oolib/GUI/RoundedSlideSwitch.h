@@ -10,9 +10,15 @@ class RoundedSlideSwitch : public juce::Button,
 public:
     RoundedSlideSwitch ();
 
+    // roundedBar is the original half width thumb; circle is a round knob inset
+    // in a pill track
+    enum class ThumbShape { roundedBar, circle };
+    void setThumbShape (ThumbShape newThumbShape) { thumbShape = newThumbShape; repaint (); }
+
     OnPopupMenuCallback onPopupMenuCallback;
 
 private:
+    ThumbShape thumbShape { ThumbShape::roundedBar };
     float position { 0.0f };
     bool wasPopupMenuClick { false };
 

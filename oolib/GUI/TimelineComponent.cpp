@@ -106,6 +106,12 @@ void TimelineComponent::setColourScheme (const ColourScheme& scheme)
     repaint ();
 }
 
+void TimelineComponent::setLabelStyle (const LabelStyle& newLabelStyle)
+{
+    labelStyle = newLabelStyle;
+    repaint ();
+}
+
 //==============================================================================
 double TimelineComponent::xToSample (float x) const noexcept
 {
@@ -218,7 +224,7 @@ void TimelineComponent::paint (juce::Graphics& g)
     const float majorTop   = labelBandH;                            // major ticks below the text
     const float minorTop   = labelBandH + (bottom - labelBandH) * 0.45f; // minor ticks shorter
 
-    g.setFont (juce::Font (juce::FontOptions (11.0f)));
+    g.setFont (labelStyle.font);
 
     for (const auto& t : ticks)
     {
@@ -230,6 +236,13 @@ void TimelineComponent::paint (juce::Graphics& g)
         {
             g.setColour (colours.majorTick);
             g.drawVerticalLine ((int) std::round (x), majorTop, bottom);
+
+            if (labelStyle.skipClippedLabels)
+            {
+                const auto textWidth { juce::GlyphArrangement::getStringWidth (g.getCurrentFont (), t.label) };
+                if (x - (textWidth * 0.5f) < 2.0f || x + (textWidth * 0.5f) > (float) getWidth () - 2.0f)
+                    continue;
+            }
 
             g.setColour (colours.text);
             const int labelW = 90;
@@ -389,9 +402,15 @@ void TimelineComponent::buildSampleTicks (std::vector<Tick>& ticks, double first
     const bool   drawMinors   = (minorSamples / samplesPerPixel) >= kMinMinorPixels
                              && minorSamples < stepSamples;
 
-    auto format = [] (double sample)
+    auto format = [this] (double sample)
     {
-        return juce::String ((juce::int64) std::llround (sample));
+        auto digits { juce::String ((juce::int64) std::llround (sample)) };
+        if (! labelStyle.groupThousands)
+            return digits;
+
+        for (auto insertAt { digits.length () - 3 }; insertAt > 0; insertAt -= 3)
+            digits = digits.substring (0, insertAt) + "," + digits.substring (insertAt);
+        return digits;
     };
 
     const double grid = drawMinors ? minorSamples : stepSamples;

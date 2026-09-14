@@ -128,6 +128,10 @@ public:
     static void  deriveWaveformColours (juce::Colour base, ColourScheme& schemeToFill);
     void         setWaveformColoursFromBase (juce::Colour base);
 
+    // Evenly spaced vertical lines behind the waveform, fixed to the view rather
+    // than to the audio. Zero divisions, the default, draws none.
+    void setGrid (int divisions, juce::Colour colour);
+
     // Vertical amplitude gain (1.0 = -1..1 fills the height, minus a small margin).
     void  setVerticalZoom (float gain);
     float getVerticalZoom () const noexcept { return verticalGain; }
@@ -238,6 +242,8 @@ private:
     double    peakEnvelopeThreshold { 1.0 };
 
     ColourScheme colours;
+    int          gridDivisions { 0 };
+    juce::Colour gridColour;
 
     // Scratch buffer reused across repaints to avoid per-frame allocation.
     std::vector<Summary> columnCache;

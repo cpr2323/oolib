@@ -1,4 +1,5 @@
 #include "oolib/GUI/ErrorHelpers.h"
+#include "oolib/GUI/ColourResolver.h"
 
 namespace ErrorHelpers
 {
@@ -12,8 +13,12 @@ namespace ErrorHelpers
                 return color.withAlpha (0.5f);
         };
 
+        // The valid-value colour follows the host app where one is offered; the
+        // error colour stays red, since that reads as an error everywhere.
+        const auto okColour { oolib::resolveColour (textEditor, oolib::ColourIds::customTextEditorText,
+                                                    juce::Colours::white) };
         if (success)
-            textEditor.applyColourToAllText (getNewTextColour (juce::Colours::white), true);
+            textEditor.applyColourToAllText (getNewTextColour (okColour), true);
         else
             textEditor.applyColourToAllText (getNewTextColour (juce::Colours::red), true);
 

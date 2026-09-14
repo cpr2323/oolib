@@ -1,4 +1,5 @@
 #include "oolib/GUI/SplitWindowComponent.h"
+#include "oolib/GUI/ColourResolver.h"
 
 #define kSplitBarWidth 5
 
@@ -82,12 +83,26 @@ int SplitWindowComponent::getSplitOffset ()
 
 void SplitWindowComponent::paint (juce::Graphics& g)
 {
-    g.fillAll (juce::Colours::lightslategrey);
-    g.setColour (juce::Colours::darkgrey);
+    using namespace oolib;
+    g.fillAll (resolveColour (*this, ColourIds::splitterBackground, juce::Colours::lightslategrey));
+
+    // an app can ask for a hairline in place of the filled handle; the bar keeps
+    // its full width for grabbing either way
+    if (const auto divider { resolveColour (*this, ColourIds::splitterDivider, juce::Colours::transparentBlack) }; ! divider.isTransparent ())
+    {
+        g.setColour (mouseOver ? resolveColour (*this, ColourIds::splitterHandleOutline, juce::Colours::white) : divider);
+        if (horizontalSplit)
+            g.fillRect (resizeBarBounds.withSizeKeepingCentre (resizeBarBounds.getWidth (), 1));
+        else
+            g.fillRect (resizeBarBounds.withSizeKeepingCentre (1, resizeBarBounds.getHeight ()));
+        return;
+    }
+
+    g.setColour (resolveColour (*this, ColourIds::splitterHandle, juce::Colours::darkgrey));
     g.fillRect (resizeBarBounds);
     if (mouseOver)
     {
-        g.setColour (juce::Colours::white);
+        g.setColour (resolveColour (*this, ColourIds::splitterHandleOutline, juce::Colours::white));
         g.drawRect (resizeBarBounds);
     }
 }
@@ -115,7 +130,13 @@ void SplitWindowComponent::mouseDrag (const juce::MouseEvent& me)
     if (mouseOver)
     {
         auto mousePosition { me.getPosition () };
-        setSplitOffset (horizontalSplit ? mousePosition.getY () : mousePosition.getX ());
+        auto newSplitOffset { horizontalSplit ? mousePosition.getY () : mousePosition.getX () };
+        if (constrainSplitOffset != nullptr)
+            newSplitOffset = constrainSplitOffset (newSplitOffset);
+        // a drag event that does not move the split has nothing to lay out
+        if (newSplitOffset == splitOffset)
+            return;
+        setSplitOffset (newSplitOffset);
         repaint ();
         if (onLayoutChange != nullptr)
             onLayoutChange ();
@@ -130,7 +151,7 @@ void SplitWindowComponent::mouseExit ([[maybe_unused]] const juce::MouseEvent& m
 
 void SplitWindowComponent::resized ()
 {
-    auto r { getLocalBounds ().reduced (4) };
+    auto r { getLocalBounds ().reduced (outerMargin) };
     if (horizontalSplit)
     {
         auto firstComponentBounds { r.removeFromTop (splitOffset - (kSplitBarWidth / 2)) };

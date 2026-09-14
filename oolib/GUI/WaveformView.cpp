@@ -204,6 +204,13 @@ void WaveformView::setWaveformColoursFromBase (juce::Colour base)
     repaint ();
 }
 
+void WaveformView::setGrid (int divisions, juce::Colour colour)
+{
+    gridDivisions = juce::jmax (0, divisions);
+    gridColour = colour;
+    repaint ();
+}
+
 void WaveformView::setVerticalZoom (float gain)
 {
     verticalGain = juce::jmax (0.01f, gain);
@@ -310,6 +317,14 @@ void WaveformView::clampView ()
 void WaveformView::paint (juce::Graphics& g)
 {
     g.fillAll (colours.background);
+
+    if (gridDivisions > 1 && ! gridColour.isTransparent ())
+    {
+        g.setColour (gridColour);
+        for (int division = 1; division < gridDivisions; ++division)
+            g.drawVerticalLine (juce::roundToInt ((float) getWidth () * (float) division / (float) gridDivisions),
+                                0.0f, (float) getHeight ());
+    }
 
     // centre line
     g.setColour (colours.centreLine);

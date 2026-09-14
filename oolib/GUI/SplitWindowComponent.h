@@ -54,8 +54,23 @@ public:
     bool getHorizontalSplit ();
     void setHorizontalSplit (bool horizontalSplit);
     void setSplitOffset (int newSplitOffset);
+
+    /*
+        The margin left around the pair of components. The default keeps a single
+        splitter off the edges of its parent, but a splitter nested inside another
+        one would then be inset twice, and its pane would not line up with the
+        pane beside it. Set it to zero on the inner splitter.
+    */
+    void setOuterMargin (int newOuterMargin) { outerMargin = newOuterMargin; resized (); }
     int getSplitOffset ();
 
+    /*
+        Where a drag is allowed to put the split, given where the pointer is asking for
+        it. Applied before the split moves, so a limit costs nothing: a drag past it
+        simply stops, rather than laying the panes out at the wrong size and then again
+        at the right one. When unset, the pointer position is used as it is.
+    */
+    std::function<int (int proposedSplitOffset)> constrainSplitOffset;
     std::function<void ()> onLayoutChange;
 
 private:
@@ -63,6 +78,7 @@ private:
     juce::Component* secondComponent { nullptr };
     juce::Rectangle<int> resizeBarBounds;
     bool horizontalSplit { true };
+    int outerMargin { 4 };
     int splitOffset { 0 };
     bool mouseOver { false };
 
