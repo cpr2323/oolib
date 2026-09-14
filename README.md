@@ -174,22 +174,3 @@ to the host.
 which of those its right-click popup offers - with a single unit the popup is suppressed entirely,
 and dropping the unit currently on display falls back to the first available one and reports it
 through `onUnitChanged`.
-
-## Client migration notes
-
-The three projects have not been updated to use oolib yet. When they are:
-
-- Every `#include "Utility/X.h"` becomes `#include "oolib/<Category>/X.h"`. The category for each
-  file is in the Layout section above.
-
-- `FileSelectLabel` gained `setDialogTitle`. Without it, callers get a generic prompt instead of their
-  app specific one. Affects `ZoneEditor.h` in A8Manager and `ChannelEditorComponent.h` in SquidManager.
-- `ValueTreeHelpers::compareChidrenAndThierPropertiesUnordered` is now spelled `compareChildren...`.
-  No callers outside the old Utility folders.
-- `CustomTextEditor::setValue` calls `setText` before `updateDataCallback`. A8Manager and SquidManager
-  previously used the opposite order, so both need testing.
-- `DirectoryDataProperties::TypeIndex` is gone. Every `TypeIndex::x` reference becomes an id obtained
-  from registration or from `DirectoryDataProperties::getFileTypeId`. 15 references across 3 files in
-  A8Manager, 9 across 2 files in SquidManager.
-- SquidManager's `systemFile` type was already unreachable: nothing produced it, so its `FileView`
-  test for it could never be true. It simply goes away.
