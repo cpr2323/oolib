@@ -61,6 +61,10 @@ public:
         float           handleWidth   { 10.0f };
         float           handleHeight  { 14.0f };
         LabelVisibility label         { LabelVisibility::whileDragging };
+        // how far the label sits from its usual row, in towards the middle of the
+        // waveform - so two markers whose handles share an edge can keep their
+        // labels on separate rows, and apart when the markers are close
+        float           labelOffset   { 0.0f };
     };
 
     struct Marker
@@ -133,6 +137,14 @@ public:
 
     const juce::String& getName (int markerIndex) const { return markers.getReference (markerIndex).name; }
 
+    // For a marker whose meaning changes with a host setting (a loop end that is
+    // sometimes shown as a length, say).
+    void setName (int markerIndex, const juce::String& newName)
+    {
+        markers.getReference (markerIndex).name = newName;
+        repaint ();
+    }
+
     double getPosition (int markerIndex) const { return markers.getReference (markerIndex).position; }
 
     // Moves a marker without consulting constrainPosition - the caller is the
@@ -172,6 +184,11 @@ public:
     // formatter so markers follow the units on display. When unset, falls back
     // to a raw sample count.
     std::function<juce::String (double)> formatPosition;
+
+    // Per marker label text, for a host whose markers do not all show their raw
+    // position (a loop end shown as the loop's length, say). When set it is used
+    // instead of formatPosition.
+    std::function<juce::String (int markerIndex, double position)> formatMarkerPosition;
 
     //==============================================================================
     void paint (juce::Graphics& g) override
@@ -404,8 +421,10 @@ private:
 
     juce::String labelText (const Marker& marker) const
     {
-        const auto position { formatPosition ? formatPosition (marker.position)
-                                             : juce::String ((juce::int64) marker.position) };
+        const auto markerIndex { static_cast<int> (&marker - markers.begin ()) };
+        const auto position { formatMarkerPosition ? formatMarkerPosition (markerIndex, marker.position)
+                                                   : (formatPosition ? formatPosition (marker.position)
+                                                                     : juce::String ((juce::int64) marker.position)) };
         return marker.name.isEmpty () ? position : marker.name + appearance.labelSeparator + position;
     }
 
@@ -424,8 +443,8 @@ private:
         const auto preferredX { style.alignment == HandleAlignment::leftOfLine ? x - width - appearance.labelGap : x + appearance.labelGap };
         const auto labelX { juce::jlimit (0.0f, juce::jmax (0.0f, (float) getWidth () - width), preferredX) };
         const auto labelY { style.placement == HandlePlacement::top
-                              ? style.handleHeight + 3.0f
-                              : (float) getHeight () - style.handleHeight - height - 3.0f };
+                              ? style.handleHeight + 3.0f + style.labelOffset
+                              : (float) getHeight () - style.handleHeight - height - 3.0f - style.labelOffset };
 
         const juce::Rectangle<float> box { labelX, labelY, width, height };
         if (! appearance.labelPlate.isTransparent ())
