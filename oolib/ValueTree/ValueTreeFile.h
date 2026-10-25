@@ -19,7 +19,7 @@ class ValueTreeFile : private juce::ValueTree::Listener,
 public:
     ValueTreeFile () noexcept;
     ValueTreeFile (juce::ValueTree vt, juce::File f, bool enableAutoSave);
-    ~ValueTreeFile ();
+    ~ValueTreeFile () override;
 
     void init (juce::ValueTree vt, juce::File f, bool enableAutoSave);
     void save ();

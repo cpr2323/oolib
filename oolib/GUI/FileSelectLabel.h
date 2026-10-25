@@ -6,7 +6,7 @@ class FileSelectLabel : public juce::Label
 {
 public:
     FileSelectLabel ();
-    ~FileSelectLabel ();
+    ~FileSelectLabel () override;
     void setOutline (juce::Colour colour);
     void setFileFilter (juce::String newFileFilterString);
     void canMultiSelect (bool canDoMultiSelect);

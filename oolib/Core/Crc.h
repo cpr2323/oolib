@@ -39,7 +39,7 @@ class Crc16 : public Crc<uint16_t>
 {
 public:
     Crc16 () = default;
-    virtual ~Crc16 () = default;
+    ~Crc16 () override = default;
     uint16_t update (uint8_t byte) noexcept override
     {
         // C implementation of CRC16
@@ -61,7 +61,7 @@ class Crc32 : public Crc<uint32_t>
 public:
     static constexpr uint32_t DELOREAN_CRC32_SEED = 0xEDB88320U;
 
-    virtual ~Crc32 () = default;
+    ~Crc32 () override = default;
     uint32_t update (uint8_t byte) noexcept override
     {
         // C implementation of CRC32

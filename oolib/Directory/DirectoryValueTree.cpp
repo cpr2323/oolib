@@ -96,7 +96,7 @@ void DirectoryValueTree::init (juce::ValueTree runtimeRootPropertiesVT)
     initialised = true;
     publishFileTypes ();
 
-    directoryDataProperties.onScanDepthChange = [this] (int scanDepth) { setScanDepth (scanDepth); };
+    directoryDataProperties.onScanDepthChange = [this] (int newScanDepth) { setScanDepth (newScanDepth); };
     directoryDataProperties.onStartScanChange = [this] ()
     {
         FolderProperties fp (directoryDataProperties.getRootFolderVT (), FolderProperties::WrapperType::client, FolderProperties::EnableCallbacks::no);
@@ -522,10 +522,10 @@ void DirectoryValueTree::sortContentsOfFolder (juce::ValueTree rootFolderVT, std
         auto& section { sections [static_cast<size_t> (sectionIndex)] };
         jassert (itemIndex >= section.startIndex + section.length);
         auto startingSectionLength { section.length };
-        auto insertItem = [&rootFolderVT, &section, &sections, numSections] (int itemIndex, int insertIndex)
+        auto insertItem = [&rootFolderVT, &section, &sections, numSections] (int indexToMove, int insertIndex)
         {
-            auto tempVT { rootFolderVT.getChild (itemIndex) };
-            rootFolderVT.removeChild (itemIndex, nullptr);
+            auto tempVT { rootFolderVT.getChild (indexToMove) };
+            rootFolderVT.removeChild (indexToMove, nullptr);
             rootFolderVT.addChild (tempVT, insertIndex, nullptr);
             ++section.length;
             for (auto curSectionIndex { 1 }; curSectionIndex < numSections; ++curSectionIndex)

@@ -249,7 +249,7 @@ void WaveformView::setDrawStyle (DrawStyle newStyle)
 void WaveformView::setPeakEnvelopeThreshold (double newThreshold)
 {
     newThreshold = juce::jmax (minSPP, newThreshold);
-    if (peakEnvelopeThreshold == newThreshold)
+    if (juce::exactlyEqual (peakEnvelopeThreshold, newThreshold))
         return;
     peakEnvelopeThreshold = newThreshold;
     repaint ();

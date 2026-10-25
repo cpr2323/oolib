@@ -9,7 +9,7 @@ static void DebugLog (juce::String logLine)
 static void dumpValueTreeContentInternal (juce::ValueTree vt, bool displayProperties, int indentLevel, std::function<void (juce::String)> displayFunction)
 {
     jassert (displayFunction != nullptr);
-    juce::String indentString { std::string (indentLevel, ' ') };
+    juce::String indentString { std::string (static_cast<size_t> (indentLevel), ' ') };
     displayFunction (indentString + vt.getType ().toString ());
     if (displayProperties)
     {
@@ -288,4 +288,4 @@ namespace ValueTreeHelpers
     {
         dumpValueTreeContentInternal (vt, displayProperties, 0, displayFunction);
     }
-};
+}

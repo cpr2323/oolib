@@ -6,7 +6,7 @@ class WatchdogTimer : public juce::Timer
 {
 public:
     WatchdogTimer () = default;
-    ~WatchdogTimer ()
+    ~WatchdogTimer () override
     {
         stop ();
     }

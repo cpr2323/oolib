@@ -48,7 +48,7 @@ class SplitWindowComponent : public juce::Component
 {
 public:
     SplitWindowComponent ();
-    ~SplitWindowComponent ();
+    ~SplitWindowComponent () override;
 
     void setComponents (juce::Component* firstComponent, juce::Component* secondComponent);
     bool getHorizontalSplit ();

@@ -6,7 +6,7 @@ class ValueTreeMonitor : public juce::ValueTree::Listener
 {
 public:
     void assign (juce::ValueTree& vtToListenTo);
-    std::function<void (juce::String text)> outputFunction { [this] (juce::String) { juce::Logger::outputDebugString ("ValueTreeMonitor - ERROR - no output function defined"); } };
+    std::function<void (juce::String text)> outputFunction { [] (juce::String) { juce::Logger::outputDebugString ("ValueTreeMonitor - ERROR - no output function defined"); } };
 
 private:
     juce::ValueTree vtBeingListened;

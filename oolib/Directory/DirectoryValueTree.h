@@ -43,7 +43,7 @@ class DirectoryValueTree : public juce::Thread,
 {
 public:
     DirectoryValueTree ();
-    ~DirectoryValueTree ();
+    ~DirectoryValueTree () override;
 
     // returns true if the file is of the type being registered
     using FileTypePredicate = std::function<bool (juce::File file)>;

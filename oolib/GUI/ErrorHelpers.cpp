@@ -52,4 +52,4 @@ namespace ErrorHelpers
         const auto int64Value { textEditor.getText ().getLargeIntValue () };
         return setColorIfError (textEditor, int64Value >= minValue && int64Value <= maxValue);
     }
-};
+}

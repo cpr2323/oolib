@@ -10,4 +10,4 @@ namespace ErrorHelpers
     bool setColorIfError (juce::TextEditor& textEditor, int minValue, int maxValue);
     bool setColorIfError (juce::TextEditor& textEditor, juce::int64 minValue, juce::int64 maxValue);
     bool setColorIfError (juce::TextEditor& textEditor, juce::File sample);
-};
+}

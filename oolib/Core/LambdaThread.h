@@ -9,7 +9,7 @@ public:
     {
         stopTimeout = theStopTimeout;
     }
-    ~LambdaThread () noexcept { stop (); }
+    ~LambdaThread () noexcept override { stop (); }
 
     bool isWaiting () { return waiting; }
     void start () { jassert (onThreadLoop != nullptr); startThread (); }

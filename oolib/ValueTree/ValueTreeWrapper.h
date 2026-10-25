@@ -9,8 +9,18 @@
     and allows clients to use them without doing ValueTree things.
 */
 
+// juce::ValueTree::Listener has a user-declared destructor, so moving a class derived from it falls back to its implicit
+// copy constructor, which is deprecated. it has no state, so moving it is the same as constructing a new one
+class MovableValueTreeListener : public juce::ValueTree::Listener
+{
+public:
+    MovableValueTreeListener () = default;
+    MovableValueTreeListener (MovableValueTreeListener&&) noexcept {}
+    MovableValueTreeListener& operator = (MovableValueTreeListener&&) noexcept { return *this; }
+};
+
 template <class derived>
-class ValueTreeWrapper : public juce::ValueTree::Listener
+class ValueTreeWrapper : public MovableValueTreeListener
 {
 public:
     enum class WrapperType { owner, client };
@@ -128,7 +138,7 @@ protected:
         else
             data.setPropertyExcludingListener (this, property, value, nullptr);
 
-        if (! filterNonChange && previousValue == value)
+        if (! filterNonChange && juce::exactlyEqual (previousValue, value))
             data.sendPropertyChangeMessage (property);
     }
 
@@ -202,7 +212,7 @@ protected:
         else
             vt.setPropertyExcludingListener (this, property, value, nullptr);
 
-        if (! filterNonChange && previousValue == value)
+        if (! filterNonChange && juce::exactlyEqual (previousValue, value))
             vt.sendPropertyChangeMessage (property);
     }
 
@@ -218,14 +228,14 @@ protected:
     void removePropertyIfExists (juce::Identifier property)
     {
         ValueTreeHelpers::removePropertyIfExists (data, property);
-    };
+    }
 
     void addPropertyIfMissing (juce::Identifier property, std::function<void ()> addPropertyCallback)
     {
         jassert (addPropertyCallback != nullptr);
         if (! data.hasProperty (property))
             addPropertyCallback ();
-    };
+    }
 
 private:
     juce::Identifier type;
@@ -238,7 +248,7 @@ private:
     void init (juce::ValueTree vt, bool createIfNotFound);
     void createValueTree ();
 
-    void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override {};
+    void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override {}
     void valueTreeChildAdded (juce::ValueTree&, juce::ValueTree&) override {}
     void valueTreeChildRemoved (juce::ValueTree&, juce::ValueTree&, int) override {}
     void valueTreeChildOrderChanged (juce::ValueTree&, int, int) override {}

@@ -58,4 +58,4 @@ namespace ValueTreeHelpers
     void overwriteExistingChildrenAndProperties (juce::ValueTree source, juce::ValueTree dest);
     void overwriteExistingProperties (juce::ValueTree source, juce::ValueTree dest);
     void removePropertyIfExists (juce::ValueTree vt, juce::Identifier property);
-};
+}
