@@ -25,9 +25,9 @@ class ValueTreeWrapper : public MovableValueTreeListener
 public:
     enum class WrapperType { owner, client };
     enum class EnableCallbacks { no, yes };
-    ValueTreeWrapper<derived> (juce::Identifier type) noexcept;
-    ValueTreeWrapper<derived> (juce::Identifier type, juce::ValueTree vt, WrapperType wrapperType, EnableCallbacks shouldEnableCallbacks) noexcept;
-    ValueTreeWrapper<derived> (ValueTreeWrapper&&) = default;
+    ValueTreeWrapper (juce::Identifier type) noexcept;
+    ValueTreeWrapper (juce::Identifier type, juce::ValueTree vt, WrapperType wrapperType, EnableCallbacks shouldEnableCallbacks) noexcept;
+    ValueTreeWrapper (ValueTreeWrapper&&) = default;
     ValueTreeWrapper<derived>& operator = (ValueTreeWrapper&&) = default;
 
     /*
