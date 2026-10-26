@@ -141,7 +141,7 @@ bool CustomComponentMouseHandler::mouseDrag (const juce::MouseEvent& mouseEvent,
     const auto curEventTime { juce::Time::getMillisecondCounterHiRes () };
     const auto elapsedTime { curEventTime - lastDragEventTime };
     lastDragEventTime = curEventTime;
-    if (travel == 0.0)
+    if (juce::exactlyEqual (travel, 0.0))
         return kEventHandled;
 
     // reversing direction, or pausing, starts the measurement over, so that the drag resumes at its finest, instead of carrying on at the
@@ -156,7 +156,7 @@ bool CustomComponentMouseHandler::mouseDrag (const juce::MouseEvent& mouseEvent,
     const auto dragSpeed { measurementRestarted ? 0.0f : updateDragSpeed (curMouseY, curEventTime) };
     const auto valueDelta { getValueDelta (dragRange, travel, dragSpeed) };
     LogMouseDragInfo ("travel: " + juce::String (travel) + ", speed: " + juce::String (dragSpeed) + ", delta: " + juce::String (valueDelta));
-    if (valueDelta != 0.0 && onDragCallback != nullptr)
+    if (! juce::exactlyEqual (valueDelta, 0.0) && onDragCallback != nullptr)
         onDragCallback (valueDelta);
     return kEventHandled;
 }
@@ -196,6 +196,6 @@ bool CustomComponentMouseHandler::mouseWheelMove (const juce::MouseEvent&, const
     // changes the value by at least one increment, which is what makes the wheel useful for nudging
     const auto valueDelta { getValueDelta (dragRange, kWheelNotchTravel * wheelDirection, wheelSpeed) };
     if (onDragCallback != nullptr)
-        onDragCallback (valueDelta != 0.0 ? valueDelta : dragRange.increment * wheelDirection);
+        onDragCallback (! juce::exactlyEqual (valueDelta, 0.0) ? valueDelta : dragRange.increment * wheelDirection);
     return kEventHandled;
 }

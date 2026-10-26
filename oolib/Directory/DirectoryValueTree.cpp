@@ -603,7 +603,7 @@ void DirectoryValueTree::setSortOrder (std::vector<int> newSortOrder)
     // every known type must appear exactly once, or entries of a missing type would have nowhere to go
     jassert (newSortOrder.size () == fileTypes.size ());
     for (const auto& fileTypeInfo : fileTypes)
-        jassert (std::count (newSortOrder.begin (), newSortOrder.end (), fileTypeInfo.id) == 1);
+        jassertquiet (std::count (newSortOrder.begin (), newSortOrder.end (), fileTypeInfo.id) == 1);
 
     applySortOrder (std::move (newSortOrder));
     publishFileTypes ();

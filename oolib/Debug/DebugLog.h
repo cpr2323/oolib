@@ -2,7 +2,7 @@
 
 #include <JuceHeader.h>
 
-static auto lockDelayLogThreshold { 5 };
+inline auto lockDelayLogThreshold { 5 };
 
 namespace DebugLogger
 {

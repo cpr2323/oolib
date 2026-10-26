@@ -5,7 +5,7 @@
 class LambdaThread : public juce::Thread
 {
 public:
-    LambdaThread (juce::String threadName, int theStopTimeout) : Thread (threadName)
+    LambdaThread (juce::String theThreadName, int theStopTimeout) : Thread (theThreadName)
     {
         stopTimeout = theStopTimeout;
     }
@@ -15,7 +15,7 @@ public:
     void start () { jassert (onThreadLoop != nullptr); startThread (); }
     void stop () { stopThread (stopTimeout); }
     void sleep (int ms) { Thread::sleep (ms); }
-    bool setPriority (Priority priority) { return Thread::setPriority (priority); }
+    bool setPriority (Priority newPriority) { return Thread::setPriority (newPriority); }
     void wake () { notify (); }
     bool waitForNotification (double timeout) { waiting = true; const auto returnValue { wait (timeout) }; waiting = false; return returnValue; }
     bool shouldExit () { return threadShouldExit (); }

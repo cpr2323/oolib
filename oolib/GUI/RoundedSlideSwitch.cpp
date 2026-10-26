@@ -42,7 +42,7 @@ void RoundedSlideSwitch::timerCallback ()
 
     position = juce::jlimit (0.0f, 1.0f, position + rate);
 
-    if (position == 0.0f || position == 1.0f)
+    if (juce::exactlyEqual (position, 0.0f) || juce::exactlyEqual (position, 1.0f))
         stopTimer ();
 
     repaint ();

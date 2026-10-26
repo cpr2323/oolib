@@ -82,7 +82,7 @@ void ValueTreeFile::requestAutoSave () noexcept
     {
         if (initialSaveRequestedTime == 0)
         {
-            startTimer (saveDelayTime / 2);
+            startTimer (static_cast<int> (saveDelayTime / 2));
             initialSaveRequestedTime = juce::Time::getMillisecondCounter ();
         }
         mostRecentSaveRequestedTime = juce::Time::getMillisecondCounter ();
