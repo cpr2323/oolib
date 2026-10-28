@@ -23,7 +23,7 @@ public:
         onTextChange = [this] () { checkValue (); };
         refreshTextColour ();
     }
-    virtual ~CustomTextEditor () = default;
+    ~CustomTextEditor () override = default;
 
     // Re-resolve when the host swaps or re-colours its LookAndFeel, so a theme
     // change reaches text that was already applied.

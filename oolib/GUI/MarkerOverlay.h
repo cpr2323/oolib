@@ -137,6 +137,9 @@ public:
 
     const juce::String& getName (int markerIndex) const { return markers.getReference (markerIndex).name; }
 
+    // keeps juce::Component::setName visible alongside the marker overload below
+    using juce::Component::setName;
+
     // For a marker whose meaning changes with a host setting (a loop end that is
     // sometimes shown as a length, say).
     void setName (int markerIndex, const juce::String& newName)
